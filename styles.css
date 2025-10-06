@@ -1,4 +1,6 @@
 * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -1658,5 +1660,71 @@ body {
     100% {
         transform: translateY(100vh) translateX(100px);
         opacity: 0;
+    }
+}
+
+/* Add at the beginning of your CSS */
+
+
+/* Optimize animations for mobile */
+@media (max-width: 768px) {
+    /* Reduce animation complexity */
+    .floating-spaceships,
+    .floating-stars,
+    .micro-stars {
+        display: none; /* Hide heavy animations on mobile */
+    }
+    
+    /* Simplify background effects */
+    #spaceBackground::before,
+    #spaceBackground::after {
+        animation: none;
+        opacity: 0.3;
+    }
+    
+    /* Reduce galaxy loader complexity */
+    .galaxy-loader {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .orbiting-planet {
+        width: 15px;
+        height: 15px;
+    }
+    
+    /* Reduce shadow effects */
+    .cosmic-card {
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Optimize transitions */
+    .section {
+        transition: opacity 0.3s ease;
+    }
+}
+
+/* Hardware acceleration for better performance */
+.cosmic-card,
+.section-image,
+.hero-image img,
+.color-swatch {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000;
+}
+
+/* Reduce animation counts on mobile */
+@media (max-width: 768px) {
+    .meteor-shower .meteor {
+        display: none;
+    }
+    
+    .meteor-shower .meteor:nth-child(-n+3) {
+        display: block; /* Show only 3 meteors */
+    }
+    
+    .floating-characters .float-char:nth-child(n+4) {
+        display: none; /* Show only 3 floating chars */
     }
 }

@@ -1,18 +1,18 @@
-// Music Configuration
+// Music Configuration - Ensure file paths are correct
 const musicConfig = {
     tracks: [
-        { id: 1, name: "Cosmic Melody 1", file: "favmusic1.mp3" },
-        { id: 2, name: "Stellar Harmony", file: "favmusic2.mp3" },
-        { id: 3, name: "Nebula Dreams", file: "favmusic3.mp3" },
-        { id: 4, name: "Galaxy Whispers", file: "favmusic4.mp3" },
-        { id: 5, name: "Orbital Love", file: "favmusic5.mp3" },
-        { id: 6, name: "Starlight Serenade", file: "favmusic6.mp3" },
-        { id: 7, name: "Moonbeam Dance", file: "favmusic7.mp3" },
-        { id: 8, name: "Cosmic Finale", file: "favmusic8.mp3" }
+        { id: 1, name: "Cosmic Melody 1", file: "./favmusic1.mp3" },
+        { id: 2, name: "Stellar Harmony", file: "./favmusic2.mp3" },
+        { id: 3, name: "Nebula Dreams", file: "./favmusic3.mp3" },
+        { id: 4, name: "Galaxy Whispers", file: "./favmusic4.mp3" },
+        { id: 5, name: "Orbital Love", file: "./favmusic5.mp3" },
+        { id: 6, name: "Starlight Serenade", file: "./favmusic6.mp3" },
+        { id: 7, name: "Moonbeam Dance", file: "./favmusic7.mp3" },
+        { id: 8, name: "Cosmic Finale", file: "./favmusic8.mp3" }
     ],
     settings: {
-        fadeDuration: 1500, // 1.5 seconds fade
-        crossfadeBuffer: 3, // Start crossfade 3 seconds before end
+        fadeDuration: 1000,
+        crossfadeBuffer: 5, // Increased buffer for reliability
         initialVolume: 0.7,
         loop: true
     }
@@ -78,7 +78,8 @@ const websiteData = {
     }
 };
 
-// Enhanced Dynamic Audio System with JSON Configuration
+// Optimized Audio System for Mobile
+// Optimized Audio System with Proper Track Transitions
 class CosmicAudioSystem {
     constructor(config) {
         this.tracks = [];
@@ -93,40 +94,47 @@ class CosmicAudioSystem {
         this.userInteracted = false;
         this.playbackAttempted = false;
 
+        // Mobile detection
+        this.isMobile = this.detectMobile();
+
         this.init(config.tracks);
         this.setupUserInteraction();
     }
 
+    detectMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
     setupUserInteraction() {
-        // Listen for any user interaction to enable audio
         const enableAudio = () => {
             if (!this.userInteracted) {
                 this.userInteracted = true;
                 console.log('🎵 User interaction detected - audio enabled');
 
-                // If we previously attempted playback, retry now
+                // Retry playback if it was attempted before user interaction
                 if (this.playbackAttempted && !this.isPlaying) {
                     this.startPlaylist();
                 }
             }
         };
 
-        // Add event listeners for various user interactions
-        ['click', 'touchstart', 'keydown', 'scroll'].forEach(eventType => {
-            document.addEventListener(eventType, enableAudio, { once: true });
+        ['click', 'touchstart', 'touchend', 'keydown'].forEach(eventType => {
+            document.addEventListener(eventType, enableAudio, { once: true, passive: true });
         });
     }
 
     async init(trackConfigs) {
         try {
-            console.log('🎵 Initializing Cosmic Audio System...');
+            console.log('🎵 Initializing Audio System...');
 
-            // Create audio elements dynamically
-            for (const trackConfig of trackConfigs) {
+            // Load fewer tracks on mobile
+            const tracksToLoad = this.isMobile ? trackConfigs.slice(0, 4) : trackConfigs;
+
+            for (const trackConfig of tracksToLoad) {
                 const audioElement = document.createElement('audio');
                 audioElement.id = `track-${trackConfig.id}`;
-                audioElement.preload = 'auto';
-                audioElement.muted = true; // Start muted to avoid autoplay issues
+                audioElement.preload = 'metadata';
+                audioElement.muted = true; // Start muted
 
                 const sourceElement = document.createElement('source');
                 sourceElement.src = trackConfig.file;
@@ -146,16 +154,11 @@ class CosmicAudioSystem {
                 };
 
                 this.tracks.push(track);
-
-                // Set up event listeners with error handling
                 await this.setupTrackEvents(track);
             }
 
             console.log(`✅ Audio system initialized with ${this.tracks.length} tracks`);
             this.isInitialized = true;
-
-            // Preload first track for immediate playback
-            await this.preloadTrack(0);
 
         } catch (error) {
             console.error('❌ Error initializing audio system:', error);
@@ -164,69 +167,37 @@ class CosmicAudioSystem {
 
     setupTrackEvents(track) {
         return new Promise((resolve) => {
-            let loadAttempts = 0;
-            const maxLoadAttempts = 2;
-
-            const attemptLoad = () => {
-                track.element.load();
-
-                // Set timeout for load detection
-                const loadTimeout = setTimeout(() => {
-                    if (!track.isLoaded && !track.loadError) {
-                        console.warn(`⚠️ Track ${track.id} taking too long to load, continuing...`);
-                        track.isLoaded = true;
-                        track.duration = 180; // Assume 3 minutes as fallback
-                        resolve();
-                    }
-                }, 3000);
-
-                track.element.addEventListener('loadedmetadata', () => {
-                    clearTimeout(loadTimeout);
-                    track.duration = track.element.duration;
-                    track.isLoaded = true;
-                    console.log(`✅ Track ${track.id} loaded: ${track.name} (${Math.round(track.duration)}s)`);
-                    resolve();
-                });
-
-                track.element.addEventListener('error', (e) => {
-                    clearTimeout(loadTimeout);
-                    loadAttempts++;
-
-                    if (loadAttempts < maxLoadAttempts) {
-                        console.warn(`🔄 Retrying track ${track.id} (attempt ${loadAttempts + 1})...`);
-                        setTimeout(attemptLoad, 1000);
-                    } else {
-                        track.loadError = true;
-                        console.error(`❌ Failed to load track ${track.id}: ${track.name}`);
-                        // Don't reject, just continue without this track
-                        resolve();
-                    }
-                });
-
-                track.element.addEventListener('ended', () => {
-                    this.handleTrackEnd(track.id - 1);
-                });
-
-                track.element.addEventListener('timeupdate', () => {
-                    this.handleTimeUpdate(track.id - 1);
-                });
+            const onLoaded = () => {
+                track.duration = track.element.duration;
+                track.isLoaded = true;
+                console.log(`✅ Track ${track.id} loaded: ${track.name}`);
+                resolve();
             };
 
-            attemptLoad();
+            const onError = () => {
+                console.error(`❌ Failed to load track ${track.id}`);
+                track.loadError = true;
+                resolve();
+            };
+
+            const onEnded = () => {
+                console.log(`🔚 Track ${track.id} ended`);
+                this.handleTrackEnd();
+            };
+
+            // Remove existing listeners first
+            track.element.removeEventListener('loadedmetadata', onLoaded);
+            track.element.removeEventListener('error', onError);
+            track.element.removeEventListener('ended', onEnded);
+
+            // Add new listeners
+            track.element.addEventListener('loadedmetadata', onLoaded, { once: true });
+            track.element.addEventListener('error', onError, { once: true });
+            track.element.addEventListener('ended', onEnded);
+
+            // Load the track
+            track.element.load();
         });
-    }
-
-    async preloadTrack(trackIndex) {
-        if (trackIndex < 0 || trackIndex >= this.tracks.length) return;
-
-        const track = this.tracks[trackIndex];
-        if (!track.isLoaded && !track.loadError) {
-            try {
-                await track.element.load();
-            } catch (error) {
-                console.warn(`⚠️ Could not preload track ${trackIndex + 1}`);
-            }
-        }
     }
 
     async startPlaylist() {
@@ -235,15 +206,9 @@ class CosmicAudioSystem {
             return false;
         }
 
-        if (this.tracks.length === 0) {
-            console.error('❌ No tracks available');
-            return false;
-        }
-
-        // Mark that playback was attempted
         this.playbackAttempted = true;
 
-        // Check if user has interacted with the page (required for autoplay)
+        // Check if user has interacted with the page
         if (!this.userInteracted) {
             console.log('🎵 Waiting for user interaction before starting audio...');
             return false;
@@ -265,7 +230,7 @@ class CosmicAudioSystem {
             }
 
             await this.playTrack(startIndex);
-            console.log('🎶 Cosmic playlist started successfully');
+            console.log('🎶 Playlist started successfully');
             return true;
 
         } catch (error) {
@@ -278,8 +243,11 @@ class CosmicAudioSystem {
     async playTrack(trackIndex) {
         if (!this.isPlaying) return;
 
+        console.log(`🎵 Attempting to play track ${trackIndex + 1}`);
+
         if (trackIndex < 0 || trackIndex >= this.tracks.length) {
             console.error('❌ Invalid track index:', trackIndex);
+            this.skipToNext();
             return;
         }
 
@@ -291,45 +259,58 @@ class CosmicAudioSystem {
             return;
         }
 
-        // Stop any currently playing track
-        await this.stopCurrentTrack();
+        // Stop current track if different
+        if (this.currentTrackIndex !== trackIndex && this.tracks[this.currentTrackIndex]) {
+            await this.stopCurrentTrack();
+        }
 
         this.currentTrackIndex = trackIndex;
 
         try {
-            // Ensure track is loaded
-            if (!track.isLoaded) {
-                await this.preloadTrack(trackIndex);
+            // Ensure track is ready
+            if (!track.isLoaded && !track.loadError) {
+                console.log(`🔄 Loading track ${trackIndex + 1}...`);
+                await new Promise(resolve => {
+                    const checkLoaded = () => {
+                        if (track.isLoaded || track.loadError) {
+                            resolve();
+                        } else {
+                            setTimeout(checkLoaded, 100);
+                        }
+                    };
+                    checkLoaded();
+                });
             }
 
-            // Unmute and set initial volume to 0 for fade in
+            if (track.loadError) {
+                this.skipToNext();
+                return;
+            }
+
+            // Set up track for playback
+            track.element.currentTime = 0;
             track.element.muted = false;
-            track.element.volume = 0;
+            track.element.volume = this.volume;
 
-            // Play the track with proper error handling
-            const playPromise = track.element.play();
+            console.log(`▶️ Playing: ${track.name}`);
+            await track.element.play();
 
-            if (playPromise !== undefined) {
-                await playPromise;
+            // Set up time update listener for crossfade
+            track.element.addEventListener('timeupdate', () => this.handleTimeUpdate());
 
-                // Fade in
-                await this.fadeIn(track.element, this.fadeDuration);
-
-                console.log(`🎵 Now playing: ${track.name} (Track ${trackIndex + 1})`);
-
-                // Preload next track for smooth transition
-                const nextTrackIndex = (trackIndex + 1) % this.tracks.length;
-                this.preloadTrack(nextTrackIndex);
+            // Preload next track
+            const nextIndex = (trackIndex + 1) % this.tracks.length;
+            if (!this.tracks[nextIndex].isLoaded && !this.tracks[nextIndex].loadError) {
+                this.tracks[nextIndex].element.load();
             }
 
         } catch (error) {
             console.error(`❌ Error playing track ${trackIndex + 1}:`, error);
 
-            // If it's an autoplay error, wait for user interaction
             if (error.name === 'NotAllowedError') {
                 console.log('🎵 Autoplay prevented, waiting for user interaction...');
-                this.isPlaying = false;
                 this.userInteracted = false;
+                this.isPlaying = false;
             } else {
                 this.skipToNext();
             }
@@ -338,9 +319,13 @@ class CosmicAudioSystem {
 
     async stopCurrentTrack() {
         const currentTrack = this.tracks[this.currentTrackIndex];
-        if (currentTrack && !currentTrack.loadError && !currentTrack.element.paused) {
+        if (currentTrack && !currentTrack.loadError) {
             try {
-                await this.fadeOut(currentTrack.element, this.fadeDuration / 2);
+                // Remove timeupdate listener
+                currentTrack.element.removeEventListener('timeupdate', () => this.handleTimeUpdate());
+
+                // Quick fade out and stop
+                await this.quickFadeOut(currentTrack.element);
                 currentTrack.element.pause();
                 currentTrack.element.currentTime = 0;
             } catch (error) {
@@ -351,162 +336,98 @@ class CosmicAudioSystem {
         }
     }
 
-    handleTrackEnd(trackIndex) {
-        if (!this.isPlaying) return;
-
-        if (this.loop || trackIndex < this.tracks.length - 1) {
-            const nextTrackIndex = (trackIndex + 1) % this.tracks.length;
-
-            // Skip tracks with load errors
-            if (this.tracks[nextTrackIndex].loadError) {
-                this.skipToNext();
-                return;
-            }
-
-            console.log(`🔄 Track ${trackIndex + 1} ended, preparing track ${nextTrackIndex + 1}`);
-        } else {
-            console.log('⏹️ Playlist completed');
-            this.isPlaying = false;
-        }
-    }
-
-    handleTimeUpdate(trackIndex) {
-        if (!this.isPlaying || trackIndex !== this.currentTrackIndex) return;
-
-        const track = this.tracks[trackIndex];
-        if (!track.isLoaded || track.loadError) return;
-
-        const timeRemaining = track.duration - track.element.currentTime;
-
-        // Start crossfade before track ends
-        if (timeRemaining <= (this.crossfadeBuffer + this.fadeDuration / 1000)) {
-            let nextTrackIndex = (trackIndex + 1) % this.tracks.length;
-
-            // Find next playable track
-            while (nextTrackIndex !== trackIndex && this.tracks[nextTrackIndex].loadError) {
-                nextTrackIndex = (nextTrackIndex + 1) % this.tracks.length;
-            }
-
-            if (nextTrackIndex !== trackIndex) {
-                this.startCrossfade(trackIndex, nextTrackIndex);
-            }
-        }
-    }
-
-    async startCrossfade(currentTrackIndex, nextTrackIndex) {
-        const currentTrack = this.tracks[currentTrackIndex];
-        const nextTrack = this.tracks[nextTrackIndex];
-
-        // Don't start crossfade if already in progress
-        if (nextTrack.element.volume > 0) return;
-
-        console.log(`🎚️ Starting crossfade: ${currentTrack.name} → ${nextTrack.name}`);
-
-        try {
-            // Start playing next track silently
-            nextTrack.element.currentTime = 0;
-            nextTrack.element.volume = 0;
-            nextTrack.element.muted = false;
-
-            const playPromise = nextTrack.element.play();
-
-            if (playPromise !== undefined) {
-                await playPromise;
-
-                // Fade out current track and fade in next track simultaneously
-                await Promise.all([
-                    this.fadeOut(currentTrack.element, this.fadeDuration),
-                    this.fadeIn(nextTrack.element, this.fadeDuration)
-                ]);
-
-                this.currentTrackIndex = nextTrackIndex;
-                console.log(`✅ Crossfade complete: Now playing ${nextTrack.name}`);
-
-                // Preload the track after next
-                const nextNextTrackIndex = (nextTrackIndex + 1) % this.tracks.length;
-                this.preloadTrack(nextNextTrackIndex);
-            }
-
-        } catch (error) {
-            console.error('❌ Crossfade error:', error);
-        }
-    }
-
-    fadeIn(audioElement, duration) {
+    quickFadeOut(audioElement) {
         return new Promise((resolve) => {
             const startVolume = audioElement.volume;
-            const targetVolume = this.volume;
+            const duration = 300; // Quick 300ms fade
             const startTime = performance.now();
 
-            const updateVolume = () => {
-                const elapsed = performance.now() - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-
-                audioElement.volume = startVolume + (targetVolume - startVolume) * progress;
-
-                if (progress < 1) {
-                    requestAnimationFrame(updateVolume);
-                } else {
-                    audioElement.volume = targetVolume;
-                    resolve();
-                }
-            };
-
-            updateVolume();
-        });
-    }
-
-    fadeOut(audioElement, duration) {
-        return new Promise((resolve) => {
-            const startVolume = audioElement.volume;
-            const startTime = performance.now();
-
-            const updateVolume = () => {
+            const fade = () => {
                 const elapsed = performance.now() - startTime;
                 const progress = Math.min(elapsed / duration, 1);
 
                 audioElement.volume = startVolume * (1 - progress);
 
                 if (progress < 1) {
-                    requestAnimationFrame(updateVolume);
+                    requestAnimationFrame(fade);
                 } else {
-                    audioElement.volume = 0;
-                    audioElement.pause();
                     resolve();
                 }
             };
 
-            updateVolume();
+            fade();
         });
+    }
+
+    handleTrackEnd() {
+        if (!this.isPlaying) return;
+
+        console.log('🔄 Track ended, preparing next track...');
+
+        if (this.loop || this.currentTrackIndex < this.tracks.length - 1) {
+            this.skipToNext();
+        } else {
+            console.log('⏹️ Playlist completed');
+            this.isPlaying = false;
+        }
+    }
+
+    handleTimeUpdate() {
+        if (!this.isPlaying) return;
+
+        const currentTrack = this.tracks[this.currentTrackIndex];
+        if (!currentTrack || !currentTrack.isLoaded || currentTrack.loadError) return;
+
+        const timeRemaining = currentTrack.duration - currentTrack.element.currentTime;
+
+        // Start crossfade before track ends (simplified for reliability)
+        if (timeRemaining <= 5) { // 5 seconds before end
+            this.skipToNext();
+        }
+    }
+
+    skipToNext() {
+        if (!this.isPlaying) return;
+
+        let nextTrackIndex = (this.currentTrackIndex + 1) % this.tracks.length;
+        let attempts = 0;
+
+        // Find next playable track (max 3 attempts to avoid infinite loop)
+        while (attempts < 3 && this.tracks[nextTrackIndex].loadError) {
+            nextTrackIndex = (nextTrackIndex + 1) % this.tracks.length;
+            attempts++;
+        }
+
+        if (this.tracks[nextTrackIndex].loadError) {
+            console.error('❌ No playable tracks available');
+            this.isPlaying = false;
+            return;
+        }
+
+        console.log(`⏭️ Skipping to track ${nextTrackIndex + 1}`);
+        this.playTrack(nextTrackIndex);
     }
 
     pause() {
         this.isPlaying = false;
-        this.tracks.forEach(track => {
-            if (!track.loadError && !track.element.paused) {
-                track.element.pause();
-            }
-        });
+        const currentTrack = this.tracks[this.currentTrackIndex];
+        if (currentTrack && !currentTrack.loadError && !currentTrack.element.paused) {
+            currentTrack.element.pause();
+        }
         console.log('⏸️ Playback paused');
     }
 
     resume() {
-        if (this.tracks.length === 0 || !this.tracks[this.currentTrackIndex]) return;
-
-        const currentTrack = this.tracks[this.currentTrackIndex];
-        if (currentTrack.loadError) {
-            this.skipToNext();
-            return;
-        }
-
-        this.isPlaying = true;
-
-        if (currentTrack.element.paused) {
-            currentTrack.element.play().then(() => {
-                console.log('▶️ Playback resumed');
-            }).catch(error => {
-                console.error('❌ Error resuming playback:', error);
-            });
+        if (!this.isPlaying && this.tracks[this.currentTrackIndex]) {
+            const currentTrack = this.tracks[this.currentTrackIndex];
+            if (!currentTrack.loadError && currentTrack.element.paused) {
+                this.isPlaying = true;
+                currentTrack.element.play().then(() => {
+                    console.log('▶️ Playback resumed');
+                }).catch(error => {
+                    console.error('❌ Error resuming playback:', error);
+                });
+            }
         }
     }
 
@@ -519,26 +440,6 @@ class CosmicAudioSystem {
         console.log(`🔊 Volume set to: ${Math.round(this.volume * 100)}%`);
     }
 
-    skipToNext() {
-        if (!this.isPlaying) return;
-
-        const currentTrack = this.tracks[this.currentTrackIndex];
-        let nextTrackIndex = (this.currentTrackIndex + 1) % this.tracks.length;
-
-        // Find next playable track
-        while (nextTrackIndex !== this.currentTrackIndex && this.tracks[nextTrackIndex].loadError) {
-            nextTrackIndex = (nextTrackIndex + 1) % this.tracks.length;
-        }
-
-        if (nextTrackIndex === this.currentTrackIndex) {
-            console.error('❌ No playable tracks available');
-            this.isPlaying = false;
-            return;
-        }
-
-        this.playTrack(nextTrackIndex);
-    }
-
     getPlaybackInfo() {
         const currentTrack = this.tracks[this.currentTrackIndex];
         if (!currentTrack) return null;
@@ -548,45 +449,67 @@ class CosmicAudioSystem {
             trackNumber: this.currentTrackIndex + 1,
             totalTracks: this.tracks.length,
             isPlaying: this.isPlaying,
-            volume: Math.round(this.volume * 100)
+            volume: Math.round(this.volume * 100),
+            currentTime: currentTrack.element.currentTime,
+            duration: currentTrack.duration
         };
     }
 }
 
-// Main Website Class
+// Optimized Main Website Class
 class CosmicLoveWebsite {
     constructor() {
         this.currentSection = 0;
         this.sections = ['naruto', 'mlbb', 'favorites', 'final'];
         this.noClickCount = 0;
-        this.maxNoClicks = 10;
+        this.maxNoClicks = 5; // Reduced for mobile
         this.loadingProgress = 0;
         this.quoteIndex = 0;
         this.data = websiteData;
-        this.audioSystem = new CosmicAudioSystem(musicConfig);
 
+        // Mobile detection
+        this.isMobile = this.detectMobile();
+
+        this.audioSystem = new CosmicAudioSystem(musicConfig);
         this.init();
     }
 
+    detectMobile() {
+        return window.innerWidth <= 768 ||
+            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
     init() {
+        this.optimizeForMobile();
         this.startLoading();
         this.setupEventListeners();
         this.createMeteorShower();
-
-        // Add audio controls to console for debugging
-        this.addConsoleControls();
     }
 
-    addConsoleControls() {
-        // Add helpful console commands for audio debugging
-        console.log('%c🎵 Audio System Controls:', 'color: #FFD166; font-size: 14px; font-weight: bold;');
-        console.log('%cType these commands in console:', 'color: #5D3FD3;');
-        console.log('%caudioSystem.getPlaybackInfo() - Get current playback info', 'color: #2D6DB3;');
-        console.log('%caudioSystem.setVolume(0.5) - Set volume (0-1)', 'color: #2D6DB3;');
-        console.log('%caudioSystem.skipToNext() - Skip to next track', 'color: #2D6DB3;');
+    optimizeForMobile() {
+        if (this.isMobile) {
+            console.log('📱 Mobile optimizations applied');
+            // Reduce animation intensity
+            this.reduceAnimations();
+        }
+    }
+
+    reduceAnimations() {
+        // These will be handled by CSS, but we can also reduce JS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @media (max-width: 768px) {
+                * {
+                    animation-duration: 0.5s !important;
+                    transition-duration: 0.3s !important;
+                }
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     setupEventListeners() {
+        // Start button
         document.getElementById('startBtn').addEventListener('click', () => {
             this.hideIntroScreen();
             // Start audio when journey begins
@@ -601,6 +524,7 @@ class CosmicLoveWebsite {
             }, 500);
         });
 
+        // Next button
         document.getElementById('nextBtn').addEventListener('click', () => {
             if (this.currentSection < this.sections.length - 1) {
                 this.showConfirmation();
@@ -609,10 +533,12 @@ class CosmicLoveWebsite {
             }
         });
 
+        // Yes button (confirmation)
         document.getElementById('yesBtn').addEventListener('click', () => {
             this.proceedToNextSection();
         });
 
+        // No button (confirmation)
         document.getElementById('noBtn').addEventListener('click', (e) => {
             this.handleNoClick(e);
         });
@@ -630,26 +556,42 @@ class CosmicLoveWebsite {
         window.addEventListener('beforeunload', () => {
             this.audioSystem.pause();
         });
+
+        // Handle window resize for mobile optimization
+        window.addEventListener('resize', () => {
+            this.handleResize();
+        });
+    }
+
+    handleResize() {
+        // Re-check if mobile on resize
+        const wasMobile = this.isMobile;
+        this.isMobile = this.detectMobile();
+
+        if (wasMobile !== this.isMobile) {
+            console.log('📱 Screen size changed, reapplying optimizations');
+            this.optimizeForMobile();
+        }
     }
 
     startLoading() {
         const loadingPercentage = document.querySelector('.loading-percentage');
 
-        const totalLoadingTime = this.data.loadingQuotes.length * 2000;
-        const updateInterval = 50;
+        // Faster loading on mobile
+        const totalLoadingTime = this.isMobile ? 3000 : 6000;
+        const updateInterval = 30; // Faster updates
         const totalUpdates = totalLoadingTime / updateInterval;
         const progressIncrement = 100 / totalUpdates;
 
         const loadingInterval = setInterval(() => {
             this.loadingProgress += progressIncrement;
-
             loadingPercentage.textContent = `${Math.min(Math.round(this.loadingProgress), 100)}%`;
 
             if (this.loadingProgress >= 100) {
                 clearInterval(loadingInterval);
                 setTimeout(() => {
                     this.hideLoadingScreen();
-                }, 3000);
+                }, 1000); // Shorter delay on mobile
             }
         }, updateInterval);
 
@@ -658,18 +600,17 @@ class CosmicLoveWebsite {
 
     startQuoteCycle() {
         const quoteElement = document.getElementById('loadingQuote');
-        let quoteInterval = setInterval(() => {
+        // Faster quote cycling on mobile
+        const quoteInterval = this.isMobile ? 1000 : 2000;
+
+        let cycleInterval = setInterval(() => {
             if (this.quoteIndex < this.data.loadingQuotes.length) {
-                quoteElement.style.opacity = '0';
-                setTimeout(() => {
-                    quoteElement.textContent = this.data.loadingQuotes[this.quoteIndex];
-                    quoteElement.style.opacity = '1';
-                    this.quoteIndex++;
-                }, 500);
+                quoteElement.textContent = this.data.loadingQuotes[this.quoteIndex];
+                this.quoteIndex++;
             } else {
-                clearInterval(quoteInterval);
+                clearInterval(cycleInterval);
             }
-        }, 2000);
+        }, quoteInterval);
     }
 
     hideLoadingScreen() {
@@ -682,10 +623,12 @@ class CosmicLoveWebsite {
             introScreen.classList.remove('hidden');
             introScreen.classList.add('active');
 
+            // Show start button immediately on mobile
+            const delay = this.isMobile ? 1000 : 5000;
             setTimeout(() => {
                 document.getElementById('startBtn').classList.remove('hidden');
-            }, 5000);
-        }, 800);
+            }, delay);
+        }, 500); // Faster transition
     }
 
     hideIntroScreen() {
@@ -721,6 +664,8 @@ class CosmicLoveWebsite {
             currentSection.classList.add('active');
             this.populateSectionContent(sectionIndex);
 
+            // Faster reveal on mobile
+            const delay = this.isMobile ? 2000 : 5000;
             setTimeout(() => {
                 if (sectionIndex < this.sections.length - 1) {
                     document.getElementById('nextBtn').classList.remove('hidden');
@@ -729,8 +674,8 @@ class CosmicLoveWebsite {
                     document.getElementById('nextBtn').classList.remove('hidden');
                     document.getElementById('nextBtn').textContent = "See Cosmic Surprise!";
                 }
-            }, 5000);
-        }, 100);
+            }, delay);
+        }, 50); // Faster
     }
 
     resetMLBBCards() {
@@ -779,25 +724,28 @@ class CosmicLoveWebsite {
         document.getElementById('laylaText').textContent = data.layla.quote;
         document.getElementById('laylaPickup').textContent = data.layla.pickupLine;
 
+        // Faster sequencing on mobile
+        const delays = this.isMobile ? [300, 600, 900, 1200] : [1000, 2000, 3000, 4000];
+
         setTimeout(() => {
             document.getElementById('hayabusaCard').classList.remove('hidden');
-            setTimeout(() => document.getElementById('hayabusaCard').classList.add('active'), 100);
-        }, 1000);
+            setTimeout(() => document.getElementById('hayabusaCard').classList.add('active'), 50);
+        }, delays[0]);
 
         setTimeout(() => {
             document.getElementById('kaguraCard').classList.remove('hidden');
-            setTimeout(() => document.getElementById('kaguraCard').classList.add('active'), 100);
-        }, 2000);
+            setTimeout(() => document.getElementById('kaguraCard').classList.add('active'), 50);
+        }, delays[1]);
 
         setTimeout(() => {
             document.getElementById('flickerCard').classList.remove('hidden');
-            setTimeout(() => document.getElementById('flickerCard').classList.add('active'), 100);
-        }, 3000);
+            setTimeout(() => document.getElementById('flickerCard').classList.add('active'), 50);
+        }, delays[2]);
 
         setTimeout(() => {
             document.getElementById('laylaCard').classList.remove('hidden');
-            setTimeout(() => document.getElementById('laylaCard').classList.add('active'), 100);
-        }, 4000);
+            setTimeout(() => document.getElementById('laylaCard').classList.add('active'), 50);
+        }, delays[3]);
     }
 
     populateFavorites(data) {
@@ -808,13 +756,16 @@ class CosmicLoveWebsite {
             { id: 'snackCard', textId: 'snackText', data: data.snack }
         ];
 
+        // Faster sequencing on mobile
+        const delayMultiplier = this.isMobile ? 300 : 800;
+
         cards.forEach((card, index) => {
             setTimeout(() => {
                 document.getElementById(card.textId).textContent = card.data.text;
                 const cardElement = document.getElementById(card.id);
                 cardElement.classList.remove('hidden');
-                setTimeout(() => cardElement.classList.add('active'), 100);
-            }, index * 800);
+                setTimeout(() => cardElement.classList.add('active'), 50);
+            }, index * delayMultiplier);
         });
     }
 
@@ -832,6 +783,7 @@ class CosmicLoveWebsite {
         noBtn.style.left = '';
         noBtn.style.top = '';
         noBtn.style.transform = '';
+        noBtn.style.display = 'block'; // Ensure it's visible
     }
 
     handleNoClick(e) {
@@ -948,8 +900,8 @@ class CosmicLoveWebsite {
                 <p>Thank you for exploring this universe made just for you, my love!</p>
                 <p>You are the most beautiful constellation in my galaxy, and I'm so lucky to orbit around you. 💫</p>
                 <div class="prompt-buttons">
-                    <button id="restartJourney" class="cosmic-btn">Restart Journey</button>
-                    <button id="closePrompt" class="cosmic-btn secondary">Keep Exploring</button>
+                    <button id="restartJourney" class="btn">Restart Journey</button>
+                    <button id="closePrompt" class="btn">Keep Exploring</button>
                 </div>
             </div>
         `;
@@ -968,7 +920,6 @@ class CosmicLoveWebsite {
     createMeteorShower() {
         let container = document.getElementById('meteorShower');
 
-        // Create container if it doesn't exist
         if (!container) {
             container = document.createElement('div');
             container.id = 'meteorShower';
@@ -976,28 +927,23 @@ class CosmicLoveWebsite {
             document.body.appendChild(container);
         }
 
-        const meteorCount = 15;
+        // Fewer meteors on mobile
+        const meteorCount = this.isMobile ? 3 : 8;
 
         for (let i = 0; i < meteorCount; i++) {
             const meteor = document.createElement('div');
             meteor.className = 'meteor';
             meteor.style.left = `${Math.random() * 100}%`;
-            meteor.style.animationDelay = `${Math.random() * 20}s`;
-            meteor.style.animationDuration = `${3 + Math.random() * 4}s`;
+            meteor.style.animationDelay = `${Math.random() * 10}s`;
+            meteor.style.animationDuration = `${2 + Math.random() * 3}s`;
             container.appendChild(meteor);
         }
     }
 }
 
-// Initialize the website when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    console.log('%c🚀 Cosmic Love Website Initializing...', 'color: #FFD166; font-size: 16px; font-weight: bold;');
-    console.log('%cMade with stardust and love 💫', 'color: #5D3FD3; font-size: 12px; font-style: italic;');
-
-    window.cosmicWebsite = new CosmicLoveWebsite();
-});
-
-// Add error handling for uncaught errors
-window.addEventListener('error', (event) => {
-    console.error('🚨 Uncaught error:', event.error);
+// Handle page visibility changes for better performance
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && window.cosmicWebsite) {
+        window.cosmicWebsite.audioSystem.pause();
+    }
 });
