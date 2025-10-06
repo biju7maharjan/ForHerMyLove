@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For My Love - A Cosmic Journey</title>
+    <link rel="stylesheet" href="styles.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Lora:wght@400;500;600;700&family=Quicksand:wght@400;500;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- Space Background -->
+    <div id="spaceBackground">
+        <div id="meteorShower" class="meteor-shower"></div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="screen active">
+        <div class="loading-container">
+            <div class="galaxy-loader">
+                <div class="black-hole"></div>
+                <div class="orbiting-planet"></div>
+                <div class="orbiting-planet"></div>
+                <div class="orbiting-planet"></div>
+            </div>
+            <div class="loading-percentage">0%</div>
+            <div id="loadingQuote" class="loading-quote">Initializing cosmic connection...</div>
+            <div class="floating-characters">
+                <span class="float-char">🚀</span>
+                <span class="float-char">🌌</span>
+                <span class="float-char">⭐</span>
+                <span class="float-char">🌠</span>
+                <span class="float-char">👽</span>
+                <span class="float-char">🛸</span>
+            </div>
+        </div>
+        <!-- Micro Stars -->
+        <div class="micro-stars">
+            <div class="micro-star"></div>
+            <div class="micro-star"></div>
+            <div class="micro-star"></div>
+            <div class="micro-star"></div>
+            <div class="micro-star"></div>
+            <div class="micro-star"></div>
+            <div class="micro-star"></div>
+            <div class="micro-star"></div>
+            <div class="micro-star"></div>
+            <div class="micro-star"></div>
+        </div>
+    </div>
+
+    <!-- Introduction Screen -->
+    <div id="introScreen" class="screen">
+        <div class="intro-container">
+            <div class="floating-spaceships">
+                <div class="spaceship">🚀</div>
+                <div class="spaceship">🛸</div>
+                <div class="spaceship">👾</div>
+            </div>
+            <h1 id="introText">Ready to explore a universe made just for you, my love?</h1>
+            <button id="startBtn" class="btn pulse hidden">Begin Cosmic Journey</button>
+        </div>
+    </div>
+
+    <!-- Main Content Container -->
+    <div id="mainContent" class="hidden">
+        <!-- Naruto Section -->
+        <section id="narutoSection" class="section hidden">
+            <div class="floating-stars"></div>
+            <div class="container">
+                <h2 class="section-title">My Cosmic Hokage</h2>
+                <div class="content-grid">
+                    <div class="image-card cosmic-card">
+                        <div class="image-container">
+                            <img src="naruto.jpg" alt="Naruto" class="section-image">
+                        </div>
+                        <div class="quote-box">
+                            <p id="narutoQuote"></p>
+                        </div>
+                    </div>
+                    <div class="pickup-card cosmic-card">
+                        <div class="pickup-line">
+                            <p id="narutoPickup"></p>
+                        </div>
+                        <div class="cosmic-symbol">🌌</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MLBB Section -->
+        <section id="mlbbSection" class="section hidden">
+            <div class="floating-stars"></div>
+            <div class="container">
+                <h2 class="section-title">Your Cosmic Warriors</h2>
+                <div class="mlbb-content">
+                    <div id="hayabusaCard" class="hero-card hidden cosmic-card">
+                        <div class="hero-image">
+                            <img src="hayabusa.jpg" alt="Hayabusa">
+                        </div>
+                        <div class="hero-info">
+                            <h3>Hayabusa</h3>
+                            <p id="hayabusaQuote"></p>
+                            <p class="pickup" id="hayabusaPickup"></p>
+                        </div>
+                    </div>
+                    <div id="kaguraCard" class="hero-card hidden cosmic-card">
+                        <div class="hero-image">
+                            <img src="kagura.jpg" alt="Kagura">
+                        </div>
+                        <div class="hero-info">
+                            <h3>Kagura</h3>
+                            <p id="kaguraQuote"></p>
+                            <p class="pickup" id="kaguraPickup"></p>
+                        </div>
+                    </div>
+                    <div id="flickerCard" class="hero-card hidden cosmic-card">
+                        <div class="hero-image">
+                            <div class="hero-icon">⚡</div>
+                        </div>
+                        <div class="hero-info">
+                            <h3>Flicker</h3>
+                            <p id="flickerText"></p>
+                            <p class="pickup" id="flickerPickup"></p>
+                        </div>
+                    </div>
+                    <div id="laylaCard" class="hero-card hidden cosmic-card">
+                        <div class="hero-image">
+                            <div class="hero-icon">😂</div>
+                        </div>
+                        <div class="hero-info">
+                            <h3>Layla LOL Emote</h3>
+                            <p id="laylaText"></p>
+                            <p class="pickup" id="laylaPickup"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Favorites Section -->
+        <section id="favoritesSection" class="section hidden">
+            <div class="floating-stars"></div>
+            <div class="container">
+                <h2 class="section-title">Your Cosmic Signature</h2>
+                <div class="favorites-grid">
+                    <div id="colorsCard" class="favorite-card hidden cosmic-card">
+                        <div class="favorite-icon">
+                            <div class="color-palette">
+                                <div class="color-swatch white"></div>
+                                <div class="color-swatch navy-blue"></div>
+                            </div>
+                        </div>
+                        <h3>Favorite Colors</h3>
+                        <p class="favorite-item">White & Navy Blue</p>
+                        <p id="colorsText"></p>
+                    </div>
+                    <div id="flowersCard" class="favorite-card hidden cosmic-card">
+                        <div class="favorite-icon">
+                            <div class="flower-icons">
+                                <span class="flower">🌸</span>
+                                <span class="flower">🌷</span>
+                                <span class="flower">💐</span>
+                            </div>
+                        </div>
+                        <h3>Favorite Flowers</h3>
+                        <p class="favorite-item">Lily, Tulip & Baby's Breath</p>
+                        <p id="flowersText"></p>
+                    </div>
+                    <div id="songCard" class="favorite-card hidden cosmic-card">
+                        <div class="favorite-icon">
+                            <div class="music-icon">🎵</div>
+                        </div>
+                        <h3>Favorite Song</h3>
+                        <p class="favorite-item">"m." by Anil Emre Daldal</p>
+                        <p id="songText"></p>
+                    </div>
+                    <div id="snackCard" class="favorite-card hidden cosmic-card">
+                        <div class="favorite-icon">
+                            <div class="snack-icons">
+                                <span class="snack">🥠</span>
+                                <span class="snack">🌶️</span>
+                            </div>
+                        </div>
+                        <h3>Favorite Snack</h3>
+                        <p class="favorite-item">Pani Puri</p>
+                        <p id="snackText"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final Section -->
+        <section id="finalSection" class="section hidden">
+            <div class="floating-spaceships">
+                <div class="spaceship">🚀</div>
+                <div class="spaceship">🛸</div>
+                <div class="spaceship">👾</div>
+            </div>
+            <div class="container">
+                <div class="final-content">
+                    <div class="cosmic-animation">
+                        <div class="alien">👽</div>
+                        <div class="ufo">🛸</div>
+                    </div>
+                    <h2 class="final-title">For You, My Starlight</h2>
+                    <div class="message-container cosmic-card">
+                        <p id="finalMessage"></p>
+                        <p id="closingMessage"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Navigation Controls -->
+    <div id="navigation" class="navigation hidden">
+        <button id="nextBtn" class="btn next-btn hidden pulse">Continue Journey</button>
+        <div id="confirmation" class="confirmation hidden cosmic-card">
+            <p>Ready to warp to the next cosmic destination?</p>
+            <div id="errorMessage" class="error-message hidden"></div>
+            <div class="confirmation-buttons">
+                <button id="yesBtn" class="btn yes-btn">Engage Warp Drive</button>
+                <button id="noBtn" class="btn no-btn">Maintain Orbit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Audio Container (Will be populated dynamically) -->
+    <div id="audioContainer" style="display: none;"></div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
