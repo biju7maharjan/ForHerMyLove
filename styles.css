@@ -525,7 +525,7 @@ body {
 
 .floating-characters {
     position: absolute;
-    bottom: 20px;
+    bottom: -60px;
     left: 0;
     width: 100%;
     display: flex;
@@ -1668,36 +1668,38 @@ body {
 
 /* Optimize animations for mobile */
 @media (max-width: 768px) {
+
     /* Reduce animation complexity */
     .floating-spaceships,
     .floating-stars,
     .micro-stars {
-        display: none; /* Hide heavy animations on mobile */
+        display: none;
+        /* Hide heavy animations on mobile */
     }
-    
+
     /* Simplify background effects */
     #spaceBackground::before,
     #spaceBackground::after {
         animation: none;
         opacity: 0.3;
     }
-    
+
     /* Reduce galaxy loader complexity */
     .galaxy-loader {
         width: 120px;
         height: 120px;
     }
-    
+
     .orbiting-planet {
         width: 15px;
         height: 15px;
     }
-    
+
     /* Reduce shadow effects */
     .cosmic-card {
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
     }
-    
+
     /* Optimize transitions */
     .section {
         transition: opacity 0.3s ease;
@@ -1719,12 +1721,19 @@ body {
     .meteor-shower .meteor {
         display: none;
     }
-    
+
     .meteor-shower .meteor:nth-child(-n+3) {
-        display: block; /* Show only 3 meteors */
+        display: block;
+        /* Show only 3 meteors */
     }
-    
+
     .floating-characters .float-char:nth-child(n+4) {
-        display: none; /* Show only 3 floating chars */
+        display: none;
+        /* Show only 3 floating chars */
     }
+}
+
+.ending-message {
+    margin: 60px 0px;
+    padding: 20px;
 }

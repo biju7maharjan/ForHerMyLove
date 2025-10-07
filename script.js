@@ -12,7 +12,7 @@ const musicConfig = {
     ],
     settings: {
         fadeDuration: 1000,
-        crossfadeBuffer: 5, // Increased buffer for reliability
+        crossfadeBuffer: 5,
         initialVolume: 0.7,
         loop: true
     }
@@ -78,31 +78,21 @@ const websiteData = {
     }
 };
 
-// Optimized Audio System for Mobile
-// Optimized Audio System with Proper Track Transitions
+// Simplified Audio System
 class CosmicAudioSystem {
     constructor(config) {
-        this.tracks = [];
+        this.tracks = config.tracks;
         this.currentTrackIndex = 0;
         this.isPlaying = false;
-        this.fadeDuration = config.settings.fadeDuration;
-        this.crossfadeBuffer = config.settings.crossfadeBuffer;
         this.volume = config.settings.initialVolume;
-        this.loop = config.settings.loop;
-        this.isInitialized = false;
-        this.audioContainer = document.getElementById('audioContainer');
         this.userInteracted = false;
-        this.playbackAttempted = false;
-
-        // Mobile detection
-        this.isMobile = this.detectMobile();
-
-        this.init(config.tracks);
+        
+        this.audioElement = document.createElement('audio');
+        this.audioElement.volume = this.volume;
+        this.audioElement.loop = false;
+        
+        document.getElementById('audioContainer').appendChild(this.audioElement);
         this.setupUserInteraction();
-    }
-
-    detectMobile() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
 
     setupUserInteraction() {
@@ -110,440 +100,145 @@ class CosmicAudioSystem {
             if (!this.userInteracted) {
                 this.userInteracted = true;
                 console.log('🎵 User interaction detected - audio enabled');
-
-                // Retry playback if it was attempted before user interaction
-                if (this.playbackAttempted && !this.isPlaying) {
-                    this.startPlaylist();
-                }
             }
         };
 
-        ['click', 'touchstart', 'touchend', 'keydown'].forEach(eventType => {
-            document.addEventListener(eventType, enableAudio, { once: true, passive: true });
-        });
-    }
-
-    async init(trackConfigs) {
-        try {
-            console.log('🎵 Initializing Audio System...');
-
-            // Load fewer tracks on mobile
-            const tracksToLoad = this.isMobile ? trackConfigs.slice(0, 4) : trackConfigs;
-
-            for (const trackConfig of tracksToLoad) {
-                const audioElement = document.createElement('audio');
-                audioElement.id = `track-${trackConfig.id}`;
-                audioElement.preload = 'metadata';
-                audioElement.muted = true; // Start muted
-
-                const sourceElement = document.createElement('source');
-                sourceElement.src = trackConfig.file;
-                sourceElement.type = 'audio/mpeg';
-
-                audioElement.appendChild(sourceElement);
-                this.audioContainer.appendChild(audioElement);
-
-                const track = {
-                    element: audioElement,
-                    id: trackConfig.id,
-                    name: trackConfig.name,
-                    file: trackConfig.file,
-                    duration: 0,
-                    isLoaded: false,
-                    loadError: false
-                };
-
-                this.tracks.push(track);
-                await this.setupTrackEvents(track);
-            }
-
-            console.log(`✅ Audio system initialized with ${this.tracks.length} tracks`);
-            this.isInitialized = true;
-
-        } catch (error) {
-            console.error('❌ Error initializing audio system:', error);
-        }
-    }
-
-    setupTrackEvents(track) {
-        return new Promise((resolve) => {
-            const onLoaded = () => {
-                track.duration = track.element.duration;
-                track.isLoaded = true;
-                console.log(`✅ Track ${track.id} loaded: ${track.name}`);
-                resolve();
-            };
-
-            const onError = () => {
-                console.error(`❌ Failed to load track ${track.id}`);
-                track.loadError = true;
-                resolve();
-            };
-
-            const onEnded = () => {
-                console.log(`🔚 Track ${track.id} ended`);
-                this.handleTrackEnd();
-            };
-
-            // Remove existing listeners first
-            track.element.removeEventListener('loadedmetadata', onLoaded);
-            track.element.removeEventListener('error', onError);
-            track.element.removeEventListener('ended', onEnded);
-
-            // Add new listeners
-            track.element.addEventListener('loadedmetadata', onLoaded, { once: true });
-            track.element.addEventListener('error', onError, { once: true });
-            track.element.addEventListener('ended', onEnded);
-
-            // Load the track
-            track.element.load();
+        ['click', 'touchstart', 'keydown'].forEach(eventType => {
+            document.addEventListener(eventType, enableAudio, { once: true });
         });
     }
 
     async startPlaylist() {
-        if (!this.isInitialized) {
-            console.error('❌ Audio system not initialized');
-            return false;
-        }
-
-        this.playbackAttempted = true;
-
-        // Check if user has interacted with the page
         if (!this.userInteracted) {
-            console.log('🎵 Waiting for user interaction before starting audio...');
+            console.log('🎵 Waiting for user interaction...');
             return false;
         }
 
-        try {
-            this.isPlaying = true;
-
-            // Find the first playable track
-            let startIndex = 0;
-            while (startIndex < this.tracks.length && this.tracks[startIndex].loadError) {
-                startIndex++;
-            }
-
-            if (startIndex >= this.tracks.length) {
-                console.error('❌ No playable tracks found');
-                this.isPlaying = false;
-                return false;
-            }
-
-            await this.playTrack(startIndex);
-            console.log('🎶 Playlist started successfully');
-            return true;
-
-        } catch (error) {
-            console.error('❌ Error starting playlist:', error);
-            this.isPlaying = false;
-            return false;
-        }
+        this.isPlaying = true;
+        return this.playTrack(this.currentTrackIndex);
     }
 
     async playTrack(trackIndex) {
         if (!this.isPlaying) return;
 
-        console.log(`🎵 Attempting to play track ${trackIndex + 1}`);
-
-        if (trackIndex < 0 || trackIndex >= this.tracks.length) {
-            console.error('❌ Invalid track index:', trackIndex);
-            this.skipToNext();
-            return;
-        }
-
         const track = this.tracks[trackIndex];
-
-        if (track.loadError) {
-            console.warn(`⚠️ Skipping track ${trackIndex + 1} due to load error`);
-            this.skipToNext();
-            return;
-        }
-
-        // Stop current track if different
-        if (this.currentTrackIndex !== trackIndex && this.tracks[this.currentTrackIndex]) {
-            await this.stopCurrentTrack();
-        }
-
-        this.currentTrackIndex = trackIndex;
+        if (!track) return;
 
         try {
-            // Ensure track is ready
-            if (!track.isLoaded && !track.loadError) {
-                console.log(`🔄 Loading track ${trackIndex + 1}...`);
-                await new Promise(resolve => {
-                    const checkLoaded = () => {
-                        if (track.isLoaded || track.loadError) {
-                            resolve();
-                        } else {
-                            setTimeout(checkLoaded, 100);
-                        }
-                    };
-                    checkLoaded();
-                });
-            }
-
-            if (track.loadError) {
-                this.skipToNext();
-                return;
-            }
-
-            // Set up track for playback
-            track.element.currentTime = 0;
-            track.element.muted = false;
-            track.element.volume = this.volume;
-
+            this.audioElement.src = track.file;
+            this.audioElement.currentTime = 0;
+            
+            await this.audioElement.play();
             console.log(`▶️ Playing: ${track.name}`);
-            await track.element.play();
-
-            // Set up time update listener for crossfade
-            track.element.addEventListener('timeupdate', () => this.handleTimeUpdate());
-
-            // Preload next track
-            const nextIndex = (trackIndex + 1) % this.tracks.length;
-            if (!this.tracks[nextIndex].isLoaded && !this.tracks[nextIndex].loadError) {
-                this.tracks[nextIndex].element.load();
-            }
-
-        } catch (error) {
-            console.error(`❌ Error playing track ${trackIndex + 1}:`, error);
-
-            if (error.name === 'NotAllowedError') {
-                console.log('🎵 Autoplay prevented, waiting for user interaction...');
-                this.userInteracted = false;
-                this.isPlaying = false;
-            } else {
+            
+            this.audioElement.onended = () => {
                 this.skipToNext();
-            }
-        }
-    }
-
-    async stopCurrentTrack() {
-        const currentTrack = this.tracks[this.currentTrackIndex];
-        if (currentTrack && !currentTrack.loadError) {
-            try {
-                // Remove timeupdate listener
-                currentTrack.element.removeEventListener('timeupdate', () => this.handleTimeUpdate());
-
-                // Quick fade out and stop
-                await this.quickFadeOut(currentTrack.element);
-                currentTrack.element.pause();
-                currentTrack.element.currentTime = 0;
-            } catch (error) {
-                console.warn('⚠️ Error stopping current track:', error);
-                currentTrack.element.pause();
-                currentTrack.element.currentTime = 0;
-            }
-        }
-    }
-
-    quickFadeOut(audioElement) {
-        return new Promise((resolve) => {
-            const startVolume = audioElement.volume;
-            const duration = 300; // Quick 300ms fade
-            const startTime = performance.now();
-
-            const fade = () => {
-                const elapsed = performance.now() - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-
-                audioElement.volume = startVolume * (1 - progress);
-
-                if (progress < 1) {
-                    requestAnimationFrame(fade);
-                } else {
-                    resolve();
-                }
             };
-
-            fade();
-        });
-    }
-
-    handleTrackEnd() {
-        if (!this.isPlaying) return;
-
-        console.log('🔄 Track ended, preparing next track...');
-
-        if (this.loop || this.currentTrackIndex < this.tracks.length - 1) {
-            this.skipToNext();
-        } else {
-            console.log('⏹️ Playlist completed');
-            this.isPlaying = false;
-        }
-    }
-
-    handleTimeUpdate() {
-        if (!this.isPlaying) return;
-
-        const currentTrack = this.tracks[this.currentTrackIndex];
-        if (!currentTrack || !currentTrack.isLoaded || currentTrack.loadError) return;
-
-        const timeRemaining = currentTrack.duration - currentTrack.element.currentTime;
-
-        // Start crossfade before track ends (simplified for reliability)
-        if (timeRemaining <= 5) { // 5 seconds before end
-            this.skipToNext();
+            
+        } catch (error) {
+            console.error('❌ Error playing track:', error);
         }
     }
 
     skipToNext() {
         if (!this.isPlaying) return;
-
-        let nextTrackIndex = (this.currentTrackIndex + 1) % this.tracks.length;
-        let attempts = 0;
-
-        // Find next playable track (max 3 attempts to avoid infinite loop)
-        while (attempts < 3 && this.tracks[nextTrackIndex].loadError) {
-            nextTrackIndex = (nextTrackIndex + 1) % this.tracks.length;
-            attempts++;
-        }
-
-        if (this.tracks[nextTrackIndex].loadError) {
-            console.error('❌ No playable tracks available');
-            this.isPlaying = false;
-            return;
-        }
-
-        console.log(`⏭️ Skipping to track ${nextTrackIndex + 1}`);
-        this.playTrack(nextTrackIndex);
+        
+        this.currentTrackIndex = (this.currentTrackIndex + 1) % this.tracks.length;
+        this.playTrack(this.currentTrackIndex);
     }
 
     pause() {
         this.isPlaying = false;
-        const currentTrack = this.tracks[this.currentTrackIndex];
-        if (currentTrack && !currentTrack.loadError && !currentTrack.element.paused) {
-            currentTrack.element.pause();
-        }
-        console.log('⏸️ Playback paused');
+        this.audioElement.pause();
     }
 
     resume() {
-        if (!this.isPlaying && this.tracks[this.currentTrackIndex]) {
-            const currentTrack = this.tracks[this.currentTrackIndex];
-            if (!currentTrack.loadError && currentTrack.element.paused) {
-                this.isPlaying = true;
-                currentTrack.element.play().then(() => {
-                    console.log('▶️ Playback resumed');
-                }).catch(error => {
-                    console.error('❌ Error resuming playback:', error);
-                });
-            }
+        if (this.isPlaying && !this.audioElement.paused) {
+            this.audioElement.play();
         }
     }
 
     setVolume(newVolume) {
         this.volume = Math.max(0, Math.min(1, newVolume));
-        const currentTrack = this.tracks[this.currentTrackIndex];
-        if (currentTrack && !currentTrack.loadError) {
-            currentTrack.element.volume = this.volume;
-        }
-        console.log(`🔊 Volume set to: ${Math.round(this.volume * 100)}%`);
-    }
-
-    getPlaybackInfo() {
-        const currentTrack = this.tracks[this.currentTrackIndex];
-        if (!currentTrack) return null;
-
-        return {
-            currentTrack: currentTrack.name,
-            trackNumber: this.currentTrackIndex + 1,
-            totalTracks: this.tracks.length,
-            isPlaying: this.isPlaying,
-            volume: Math.round(this.volume * 100),
-            currentTime: currentTrack.element.currentTime,
-            duration: currentTrack.duration
-        };
+        this.audioElement.volume = this.volume;
     }
 }
 
-// Optimized Main Website Class
+// Main Website Class
 class CosmicLoveWebsite {
     constructor() {
         this.currentSection = 0;
         this.sections = ['naruto', 'mlbb', 'favorites', 'final'];
         this.noClickCount = 0;
-        this.maxNoClicks = 5; // Reduced for mobile
+        this.maxNoClicks = 10;
         this.loadingProgress = 0;
         this.quoteIndex = 0;
         this.data = websiteData;
 
-        // Mobile detection
         this.isMobile = this.detectMobile();
-
         this.audioSystem = new CosmicAudioSystem(musicConfig);
-        this.init();
+        
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.init());
+        } else {
+            this.init();
+        }
     }
 
     detectMobile() {
-        return window.innerWidth <= 768 ||
-            /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        return window.innerWidth <= 768 || 
+               /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     }
 
     init() {
-        this.optimizeForMobile();
+        console.log('🚀 Initializing Cosmic Love Website...');
         this.startLoading();
         this.setupEventListeners();
         this.createMeteorShower();
     }
 
-    optimizeForMobile() {
-        if (this.isMobile) {
-            console.log('📱 Mobile optimizations applied');
-            // Reduce animation intensity
-            this.reduceAnimations();
-        }
-    }
-
-    reduceAnimations() {
-        // These will be handled by CSS, but we can also reduce JS animations
-        const style = document.createElement('style');
-        style.textContent = `
-            @media (max-width: 768px) {
-                * {
-                    animation-duration: 0.5s !important;
-                    transition-duration: 0.3s !important;
-                }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
     setupEventListeners() {
         // Start button
-        document.getElementById('startBtn').addEventListener('click', () => {
-            this.hideIntroScreen();
-            // Start audio when journey begins
-            setTimeout(() => {
-                this.audioSystem.startPlaylist().then(success => {
-                    if (success) {
-                        console.log('🎶 Background music started');
-                    } else {
-                        console.warn('⚠️ Background music could not be started - user interaction required');
-                    }
-                });
-            }, 500);
-        });
+        const startBtn = document.getElementById('startBtn');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                this.hideIntroScreen();
+                setTimeout(() => {
+                    this.audioSystem.startPlaylist();
+                }, 500);
+            });
+        }
 
         // Next button
-        document.getElementById('nextBtn').addEventListener('click', () => {
-            if (this.currentSection < this.sections.length - 1) {
-                this.showConfirmation();
-            } else {
-                this.showEndMessage();
-            }
-        });
+        const nextBtn = document.getElementById('nextBtn');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                if (this.currentSection < this.sections.length - 1) {
+                    this.showConfirmation();
+                } else {
+                    this.showEndMessage();
+                }
+            });
+        }
 
-        // Yes button (confirmation)
-        document.getElementById('yesBtn').addEventListener('click', () => {
-            this.proceedToNextSection();
-        });
+        // Yes button
+        const yesBtn = document.getElementById('yesBtn');
+        if (yesBtn) {
+            yesBtn.addEventListener('click', () => {
+                this.proceedToNextSection();
+            });
+        }
 
-        // No button (confirmation)
-        document.getElementById('noBtn').addEventListener('click', (e) => {
-            this.handleNoClick(e);
-        });
+        // No button
+        const noBtn = document.getElementById('noBtn');
+        if (noBtn) {
+            noBtn.addEventListener('click', (e) => {
+                this.handleNoClick(e);
+            });
+        }
 
-        // Handle page visibility changes
+        // Handle page visibility
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 this.audioSystem.pause();
@@ -551,47 +246,26 @@ class CosmicLoveWebsite {
                 this.audioSystem.resume();
             }
         });
-
-        // Handle page unload
-        window.addEventListener('beforeunload', () => {
-            this.audioSystem.pause();
-        });
-
-        // Handle window resize for mobile optimization
-        window.addEventListener('resize', () => {
-            this.handleResize();
-        });
-    }
-
-    handleResize() {
-        // Re-check if mobile on resize
-        const wasMobile = this.isMobile;
-        this.isMobile = this.detectMobile();
-
-        if (wasMobile !== this.isMobile) {
-            console.log('📱 Screen size changed, reapplying optimizations');
-            this.optimizeForMobile();
-        }
     }
 
     startLoading() {
         const loadingPercentage = document.querySelector('.loading-percentage');
-
-        // Faster loading on mobile
         const totalLoadingTime = this.isMobile ? 3000 : 6000;
-        const updateInterval = 30; // Faster updates
+        const updateInterval = 30;
         const totalUpdates = totalLoadingTime / updateInterval;
         const progressIncrement = 100 / totalUpdates;
 
         const loadingInterval = setInterval(() => {
             this.loadingProgress += progressIncrement;
-            loadingPercentage.textContent = `${Math.min(Math.round(this.loadingProgress), 100)}%`;
+            if (loadingPercentage) {
+                loadingPercentage.textContent = `${Math.min(Math.round(this.loadingProgress), 100)}%`;
+            }
 
             if (this.loadingProgress >= 100) {
                 clearInterval(loadingInterval);
                 setTimeout(() => {
                     this.hideLoadingScreen();
-                }, 1000); // Shorter delay on mobile
+                }, 1000);
             }
         }, updateInterval);
 
@@ -600,11 +274,10 @@ class CosmicLoveWebsite {
 
     startQuoteCycle() {
         const quoteElement = document.getElementById('loadingQuote');
-        // Faster quote cycling on mobile
         const quoteInterval = this.isMobile ? 1000 : 2000;
 
         let cycleInterval = setInterval(() => {
-            if (this.quoteIndex < this.data.loadingQuotes.length) {
+            if (this.quoteIndex < this.data.loadingQuotes.length && quoteElement) {
                 quoteElement.textContent = this.data.loadingQuotes[this.quoteIndex];
                 this.quoteIndex++;
             } else {
@@ -617,18 +290,20 @@ class CosmicLoveWebsite {
         const loadingScreen = document.getElementById('loadingScreen');
         const introScreen = document.getElementById('introScreen');
 
-        loadingScreen.classList.remove('active');
-        setTimeout(() => {
-            loadingScreen.classList.add('hidden');
-            introScreen.classList.remove('hidden');
-            introScreen.classList.add('active');
-
-            // Show start button immediately on mobile
-            const delay = this.isMobile ? 1000 : 5000;
+        if (loadingScreen && introScreen) {
+            loadingScreen.classList.remove('active');
             setTimeout(() => {
-                document.getElementById('startBtn').classList.remove('hidden');
-            }, delay);
-        }, 500); // Faster transition
+                loadingScreen.classList.add('hidden');
+                introScreen.classList.remove('hidden');
+                introScreen.classList.add('active');
+
+                const delay = this.isMobile ? 1000 : 5000;
+                setTimeout(() => {
+                    const startBtn = document.getElementById('startBtn');
+                    if (startBtn) startBtn.classList.remove('hidden');
+                }, delay);
+            }, 500);
+        }
     }
 
     hideIntroScreen() {
@@ -636,59 +311,72 @@ class CosmicLoveWebsite {
         const mainContent = document.getElementById('mainContent');
         const navigation = document.getElementById('navigation');
 
-        introScreen.classList.remove('active');
-        setTimeout(() => {
-            introScreen.classList.add('hidden');
-            mainContent.classList.remove('hidden');
-            navigation.classList.remove('hidden');
-            this.showSection(0);
-        }, 800);
+        if (introScreen && mainContent && navigation) {
+            introScreen.classList.remove('active');
+            setTimeout(() => {
+                introScreen.classList.add('hidden');
+                mainContent.classList.remove('hidden');
+                navigation.classList.remove('hidden');
+                this.showSection(0);
+            }, 800);
+        }
     }
 
     showSection(sectionIndex) {
+        // Hide all sections
         document.querySelectorAll('.section').forEach(section => {
             section.classList.remove('active', 'hidden');
             section.classList.add('hidden');
         });
 
-        document.getElementById('nextBtn').classList.add('hidden');
-        document.getElementById('confirmation').classList.add('hidden');
+        const nextBtn = document.getElementById('nextBtn');
+        const confirmation = document.getElementById('confirmation');
+        
+        if (nextBtn) nextBtn.classList.add('hidden');
+        if (confirmation) confirmation.classList.add('hidden');
 
         if (sectionIndex === 1) this.resetMLBBCards();
         if (sectionIndex === 2) this.resetFavoritesCards();
 
         const currentSection = document.getElementById(`${this.sections[sectionIndex]}Section`);
-        currentSection.classList.remove('hidden');
-
-        setTimeout(() => {
-            currentSection.classList.add('active');
-            this.populateSectionContent(sectionIndex);
-
-            // Faster reveal on mobile
-            const delay = this.isMobile ? 2000 : 5000;
+        if (currentSection) {
+            currentSection.classList.remove('hidden');
             setTimeout(() => {
-                if (sectionIndex < this.sections.length - 1) {
-                    document.getElementById('nextBtn').classList.remove('hidden');
-                    document.getElementById('nextBtn').textContent = "Warp to Next";
-                } else {
-                    document.getElementById('nextBtn').classList.remove('hidden');
-                    document.getElementById('nextBtn').textContent = "See Cosmic Surprise!";
-                }
-            }, delay);
-        }, 50); // Faster
+                currentSection.classList.add('active');
+                this.populateSectionContent(sectionIndex);
+
+                const delay = this.isMobile ? 2000 : 5000;
+                setTimeout(() => {
+                    if (nextBtn) {
+                        nextBtn.classList.remove('hidden');
+                        if (sectionIndex < this.sections.length - 1) {
+                            nextBtn.textContent = "Warp to Next";
+                        } else {
+                            nextBtn.textContent = "See Cosmic Surprise!";
+                        }
+                    }
+                }, delay);
+            }, 50);
+        }
     }
 
     resetMLBBCards() {
         ['hayabusaCard', 'kaguraCard', 'flickerCard', 'laylaCard'].forEach(card => {
-            document.getElementById(card).classList.remove('active');
-            document.getElementById(card).classList.add('hidden');
+            const cardElement = document.getElementById(card);
+            if (cardElement) {
+                cardElement.classList.remove('active');
+                cardElement.classList.add('hidden');
+            }
         });
     }
 
     resetFavoritesCards() {
         ['colorsCard', 'flowersCard', 'songCard', 'snackCard'].forEach(card => {
-            document.getElementById(card).classList.remove('active');
-            document.getElementById(card).classList.add('hidden');
+            const cardElement = document.getElementById(card);
+            if (cardElement) {
+                cardElement.classList.remove('active');
+                cardElement.classList.add('hidden');
+            }
         });
     }
 
@@ -698,8 +386,8 @@ class CosmicLoveWebsite {
 
         switch (sectionKey) {
             case 'naruto':
-                document.getElementById('narutoQuote').textContent = sectionData.quote;
-                document.getElementById('narutoPickup').textContent = sectionData.pickupLine;
+                this.setElementText('narutoQuote', sectionData.quote);
+                this.setElementText('narutoPickup', sectionData.pickupLine);
                 break;
             case 'mlbb':
                 this.populateMLBB(sectionData);
@@ -708,44 +396,39 @@ class CosmicLoveWebsite {
                 this.populateFavorites(sectionData);
                 break;
             case 'final':
-                document.getElementById('finalMessage').textContent = sectionData.message;
-                document.getElementById('closingMessage').textContent = sectionData.closingMessage;
+                this.setElementText('finalMessage', sectionData.message);
+                this.setElementText('closingMessage', sectionData.closingMessage);
                 break;
         }
     }
 
+    setElementText(id, text) {
+        const element = document.getElementById(id);
+        if (element) element.textContent = text;
+    }
+
     populateMLBB(data) {
-        document.getElementById('hayabusaQuote').textContent = data.hayabusa.quote;
-        document.getElementById('hayabusaPickup').textContent = data.hayabusa.pickupLine;
-        document.getElementById('kaguraQuote').textContent = data.kagura.quote;
-        document.getElementById('kaguraPickup').textContent = data.kagura.pickupLine;
-        document.getElementById('flickerText').textContent = data.flicker.quote;
-        document.getElementById('flickerPickup').textContent = data.flicker.pickupLine;
-        document.getElementById('laylaText').textContent = data.layla.quote;
-        document.getElementById('laylaPickup').textContent = data.layla.pickupLine;
+        this.setElementText('hayabusaQuote', data.hayabusa.quote);
+        this.setElementText('hayabusaPickup', data.hayabusa.pickupLine);
+        this.setElementText('kaguraQuote', data.kagura.quote);
+        this.setElementText('kaguraPickup', data.kagura.pickupLine);
+        this.setElementText('flickerText', data.flicker.quote);
+        this.setElementText('flickerPickup', data.flicker.pickupLine);
+        this.setElementText('laylaText', data.layla.quote);
+        this.setElementText('laylaPickup', data.layla.pickupLine);
 
-        // Faster sequencing on mobile
         const delays = this.isMobile ? [300, 600, 900, 1200] : [1000, 2000, 3000, 4000];
+        const cards = ['hayabusaCard', 'kaguraCard', 'flickerCard', 'laylaCard'];
 
-        setTimeout(() => {
-            document.getElementById('hayabusaCard').classList.remove('hidden');
-            setTimeout(() => document.getElementById('hayabusaCard').classList.add('active'), 50);
-        }, delays[0]);
-
-        setTimeout(() => {
-            document.getElementById('kaguraCard').classList.remove('hidden');
-            setTimeout(() => document.getElementById('kaguraCard').classList.add('active'), 50);
-        }, delays[1]);
-
-        setTimeout(() => {
-            document.getElementById('flickerCard').classList.remove('hidden');
-            setTimeout(() => document.getElementById('flickerCard').classList.add('active'), 50);
-        }, delays[2]);
-
-        setTimeout(() => {
-            document.getElementById('laylaCard').classList.remove('hidden');
-            setTimeout(() => document.getElementById('laylaCard').classList.add('active'), 50);
-        }, delays[3]);
+        cards.forEach((cardId, index) => {
+            setTimeout(() => {
+                const card = document.getElementById(cardId);
+                if (card) {
+                    card.classList.remove('hidden');
+                    setTimeout(() => card.classList.add('active'), 50);
+                }
+            }, delays[index]);
+        });
     }
 
     populateFavorites(data) {
@@ -756,34 +439,42 @@ class CosmicLoveWebsite {
             { id: 'snackCard', textId: 'snackText', data: data.snack }
         ];
 
-        // Faster sequencing on mobile
         const delayMultiplier = this.isMobile ? 300 : 800;
 
         cards.forEach((card, index) => {
             setTimeout(() => {
-                document.getElementById(card.textId).textContent = card.data.text;
+                this.setElementText(card.textId, card.data.text);
                 const cardElement = document.getElementById(card.id);
-                cardElement.classList.remove('hidden');
-                setTimeout(() => cardElement.classList.add('active'), 50);
+                if (cardElement) {
+                    cardElement.classList.remove('hidden');
+                    setTimeout(() => cardElement.classList.add('active'), 50);
+                }
             }, index * delayMultiplier);
         });
     }
 
     showConfirmation() {
-        document.getElementById('nextBtn').classList.add('hidden');
-        document.getElementById('confirmation').classList.remove('hidden');
-        document.getElementById('errorMessage').classList.add('hidden');
+        const nextBtn = document.getElementById('nextBtn');
+        const confirmation = document.getElementById('confirmation');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        if (nextBtn) nextBtn.classList.add('hidden');
+        if (confirmation) confirmation.classList.remove('hidden');
+        if (errorMessage) errorMessage.classList.add('hidden');
+        
         this.noClickCount = 0;
         this.resetNoButtonPosition();
     }
 
     resetNoButtonPosition() {
         const noBtn = document.getElementById('noBtn');
-        noBtn.style.position = 'static';
-        noBtn.style.left = '';
-        noBtn.style.top = '';
-        noBtn.style.transform = '';
-        noBtn.style.display = 'block'; // Ensure it's visible
+        if (noBtn) {
+            noBtn.style.position = 'static';
+            noBtn.style.left = '';
+            noBtn.style.top = '';
+            noBtn.style.transform = '';
+            noBtn.style.display = 'block';
+        }
     }
 
     handleNoClick(e) {
@@ -794,22 +485,24 @@ class CosmicLoveWebsite {
         const noBtn = e.target;
         const errorMessage = document.getElementById('errorMessage');
         const messages = [
-            "Come on, the universe is waiting! 😅",
-            "Esto ta haina holaaaaa! The cosmos demands your attention! 🙄",
-            "Pretty please with a supernova on top? 🥺",
-            "You know you want to explore the cosmic wonders! 🫨",
-            "Just click 'Engage Warp Drive' already! 😭",
-            "I'm still gonna orbit around you until you click that yes! 😏",
-            "Your persistence is admirable! But the space-time continuum needs you to click yes! 😜",
-            "Okay, you win... but not until you click 'Engage Warp Drive'! 🤣",
-            "I see you're enjoying the view! But it would be even better at light speed! 😉",
-            "ABRACADABRA THE NO BUTTON VANISHES INTO A BLACK HOLE! Now you have to click yes! 😈"
+            "Come on 😅",
+            "Esto ta haina holaaaaa! 🙄",
+            "Pretty please? 🥺",
+            "You know you want to ahemm i mean ahemmm. Arent you curiossssssssssss? 🫨",
+            "Just click Engage Warp Drive already! 😭",
+            "I'm still gonna chase until you click that Engage Warp Drive! 😏",
+            "Your persistence is admirable! But nuh uhhh you gotta click Engage Warp Drive hmmmph 😜",
+            "Okay, you win... but not until you click Engage Warp Drive! 🤣",
+            "I see you're having fun! But you know it would be more fun if you clicked Engage Warp Drive huhu 😉",
+            "NUH UH ABRACADABRA THE NO BUTTON DISAPPEARS universe is calling so Engage Warp Drive hannai parcha! 😈"
         ];
 
-        errorMessage.textContent = messages[Math.min(this.noClickCount - 1, messages.length - 1)];
-        errorMessage.classList.remove('hidden');
+        if (errorMessage) {
+            errorMessage.textContent = messages[Math.min(this.noClickCount - 1, messages.length - 1)];
+            errorMessage.classList.remove('hidden');
+        }
 
-        if (this.noClickCount >= this.maxNoClicks) {
+        if (this.noClickCount >= this.maxNoClicks && noBtn) {
             noBtn.style.display = 'none';
             return;
         }
@@ -819,8 +512,9 @@ class CosmicLoveWebsite {
 
     moveNoButtonRandomly(button) {
         const confirmationButtons = document.querySelector('.confirmation-buttons');
-        const buttonsRect = confirmationButtons.getBoundingClientRect();
+        if (!confirmationButtons || !button) return;
 
+        const buttonsRect = confirmationButtons.getBoundingClientRect();
         const buttonWidth = button.offsetWidth;
         const buttonHeight = button.offsetHeight;
         const maxX = buttonsRect.width - buttonWidth - 10;
@@ -835,8 +529,12 @@ class CosmicLoveWebsite {
     }
 
     proceedToNextSection() {
-        document.getElementById('confirmation').classList.add('hidden');
-        document.getElementById('errorMessage').classList.add('hidden');
+        const confirmation = document.getElementById('confirmation');
+        const errorMessage = document.getElementById('errorMessage');
+        
+        if (confirmation) confirmation.classList.add('hidden');
+        if (errorMessage) errorMessage.classList.add('hidden');
+        
         this.currentSection++;
 
         if (this.currentSection < this.sections.length) {
@@ -847,23 +545,27 @@ class CosmicLoveWebsite {
     }
 
     showEndMessage() {
-        document.getElementById('navigation').classList.add('hidden');
+        const navigation = document.getElementById('navigation');
+        if (navigation) navigation.classList.add('hidden');
 
         const finalSection = document.getElementById('finalSection');
-        const endingMessage = document.createElement('div');
-        endingMessage.className = 'ending-message cosmic-card';
-        endingMessage.innerHTML = `
-            <div class="cosmic-animation">
-                <div class="alien">👽</div>
-                <div class="ufo">🛸</div>
-            </div>
-            <h2>Mission Complete, Captain!</h2>
-            <p>You've successfully navigated through this cosmic journey made just for you, my love! 🚀</p>
-            <p>Remember, in the vast universe of possibilities, you'll always be my favorite constellation. 💫</p>
-            <p class="console-message">Check the browser console for a secret cosmic message! (Press F12)</p>
-        `;
+        if (finalSection) {
+            const endingMessage = document.createElement('div');
+            endingMessage.className = 'ending-message cosmic-card';
+            endingMessage.innerHTML = `
+                <div class="cosmic-animation">
+                    <div class="alien">👽</div>
+                    <div class="ufo">🛸</div>
+                </div>
+                <h2>Mission Complete, Captain!</h2>
+                <p>You've successfully navigated through this cosmic journey made just for you, my love! 🚀</p>
+                <p>Remember, in the vast universe of possibilities, you'll always be my favorite constellation. 💫</p>
+                <p class="console-message">Check the browser console for a secret cosmic message! (Press F12)</p>
+            `;
 
-        finalSection.querySelector('.container').appendChild(endingMessage);
+            const container = finalSection.querySelector('.container');
+            if (container) container.appendChild(endingMessage);
+        }
 
         console.log(`%c
 ╔══════════════════════════════════════════════════════╗
@@ -919,17 +621,9 @@ class CosmicLoveWebsite {
 
     createMeteorShower() {
         let container = document.getElementById('meteorShower');
+        if (!container) return;
 
-        if (!container) {
-            container = document.createElement('div');
-            container.id = 'meteorShower';
-            container.className = 'meteor-shower';
-            document.body.appendChild(container);
-        }
-
-        // Fewer meteors on mobile
         const meteorCount = this.isMobile ? 3 : 8;
-
         for (let i = 0; i < meteorCount; i++) {
             const meteor = document.createElement('div');
             meteor.className = 'meteor';
@@ -941,7 +635,12 @@ class CosmicLoveWebsite {
     }
 }
 
-// Handle page visibility changes for better performance
+// Initialize the website when the DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    window.cosmicWebsite = new CosmicLoveWebsite();
+});
+
+// Handle page visibility changes
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && window.cosmicWebsite) {
         window.cosmicWebsite.audioSystem.pause();
